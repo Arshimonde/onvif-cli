@@ -15,6 +15,16 @@ class PromptService {
         ])
     }
 
+    // create a list prompt 
+    public static confirm(message: String, answerKey: String) {
+        return inquirer.prompt([
+            {
+                name: answerKey,
+                message: message,
+                type: "confirm"
+            }
+        ])
+    }
     // create an input prompt 
     public static input(message: String, answerKey: String) {
         return inquirer.prompt([

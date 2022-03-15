@@ -6,6 +6,8 @@ import { OnvifDevice } from "node-onvif-ts";
 import { logLoading } from "../helpers/logger";
 import { logError } from "../helpers/logger";
 import { CapabalitiesFields } from "../enum/capabalities.enum";
+import chalk from "chalk";
+import { exec } from "child_process";
 
 class CLIService {
 
@@ -107,6 +109,27 @@ class CLIService {
                 return CapabalitiesFields.Extension
             default:
                 return CapabalitiesFields.All
+        }
+    }
+    public static async askToPlayRTSPUri(Uri: string): Promise<boolean>{
+        console.log(chalk.bgMagenta(chalk.white("If you have FFMPEG installed globaly, you can see preview of the stream")));
+        const answer = await PromptService.confirm("Do you want to preview the stream", "confirm");
+        if(answer["confirm"]){
+            exec("ffplay '" + Uri + "' -loglevel panic", (error, stdout, stderr) => {
+                if (error) {
+                  console.error(`error: ${error.message}`);
+                  return;
+                }
+              
+                if (stderr) {
+                  console.error(`stderr: ${stderr}`);
+                  return;
+                }
+            })
+            
+            return true;
+        }else {
+            return false;
         }
     }
 }

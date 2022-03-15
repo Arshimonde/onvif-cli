@@ -37,7 +37,8 @@ async function cli() {
             [
                 "device-information",
                 "get-capabilites",
-                "get-device-profiles",
+                "get-onvif-profiles",
+                "get-streaming-uri",
                 "change-device",
                 "exit"
             ]
@@ -50,14 +51,24 @@ async function cli() {
                 logTable(device.getInformation())
                 break;
             case "get-capabilites":
+                //get capabalities using onvif
                 const capabilites = await onvifService.getCapabilities();
+                //ask user to select a specific capabilities
                 const field = await CLIService.selectCapabilities();
-                const selectedField = OnvifServiceCLI.getCapabalityField(capabilites, field);
-                logJSON(selectedField)
+                // display the capability field
+                const selectedField = OnvifServiceCLI.getCapabilityField(capabilites, field);
+                logTable(selectedField)
+
                 break;
-            case "get-device-profiles": {
-                const profiles = await onvifService.getProfiles();
+            case "get-onvif-profiles": {
+                const profiles = await onvifService.getOnvifProfiles();
                 logTable(profiles);
+                break;
+            }
+            case "get-streaming-uri": {
+                const streamingUri = await onvifService.getStreamingUri();
+                logJSON(streamingUri);
+                await CLIService.askToPlayRTSPUri(OnvifServiceCLI.setupRtspUrl(streamingUri, deviceInfo.username, deviceInfo.password))
                 break;
             }
             case "change-device": {
