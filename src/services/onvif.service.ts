@@ -50,26 +50,34 @@ class OnvifServiceCLI {
 
     public async getStreamingUri(): Promise<string> {
         try {
-            let streamingUri = ""
-            // get first profile token
             let response = await this.device.services.media?.getProfiles();
             let data = response?.data;
             const profiles = data["GetProfilesResponse"]["Profiles"];
-            const firstProfile = profiles[0];
-            const profileToken = firstProfile["$"]["token"];
 
-            // get streaming uri using profile token
-            response = await this.device.services.media?.getStreamUri({
-                ProfileToken: profileToken,
-                Protocol: "RTSP"
-            });
-            data = response?.data;
-            streamingUri = data["GetStreamUriResponse"]["MediaUri"]["Uri"];
+            if (profiles.length) {
+                const uris = await Promise.all(profiles.map(async (profile: any) => {
+                    const profileToken = profile["$"]["token"];
+                    // get streaming uri using profile token
+                    response = await this.device.services.media?.getStreamUri({
+                        ProfileToken: profileToken,
+                        Protocol: "RTSP"
+                    });
+                    data = response?.data;
+                    const streamingUri = data["GetStreamUriResponse"]["MediaUri"]["Uri"];
+                    return streamingUri;
+                }))
+                
+                console.table(uris);
 
-            if (streamingUri)
-                return streamingUri;
-            else
+                if (uris.length)
+                    return uris[0];
+                else
+                    return "";
+                    
+            } else {
                 return "";
+            }
+
 
         } catch (error) {
             throw error;
@@ -108,7 +116,7 @@ class OnvifServiceCLI {
         }
     }
     // SETUP RTSP URL
-    public static setupRtspUrl(url:string, user:string, pass:string): string {
+    public static setupRtspUrl(url: string, user: string, pass: string): string {
         let uri = url;
         let uriPart1, uriPart2;
 
@@ -137,7 +145,7 @@ class OnvifServiceCLI {
 export default OnvifServiceCLI;
 
 function flattenObject(ob: any): any {
-    var toReturn:any = {};
+    var toReturn: any = {};
 
     for (var i in ob) {
         if (!ob.hasOwnProperty(i)) continue;
