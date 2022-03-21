@@ -8,10 +8,10 @@ export const logJSON = (object:any)=>{
 
 export const logError = (error: unknown) => {
     if (error instanceof Error) {
-        console.log(chalk.red(error.message))
+        console.log(chalk.red(JSON.stringify(error.message)))
         return;
     } 
-    console.log(chalk.red(String(error)))
+    console.log(chalk.red(JSON.stringify(error)))
 }
 
 export const logTable = (object: Object)=>{
@@ -23,6 +23,7 @@ export const logSuccess = (message: String) => {
 }
 
 export const logLoading = (message: string = "")=>{
-    const spinner = ora(message+"\n").start();
+    let spinner = ora().start()
+    spinner.info((message+"\n")).start()
     return spinner;
 }

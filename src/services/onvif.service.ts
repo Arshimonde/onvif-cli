@@ -1,10 +1,16 @@
-import { OnvifDevice } from "node-onvif-ts";
+import { OnvifDevice } from "node-onvif-ts-extended";
 import { OnvifProfile } from "../interfaces/onvif/onvifProfile.interface";
 import Capabalities from "../interfaces/onvif/capabilities.interface";
 import { Scopes } from "../interfaces/onvif/scopes.interface";
 import { CapabalitiesFields } from "../enum/capabalities.enum";
-import { SnapshotUri } from "../interfaces/onvif/snapshot.interface";
+import flattenObject from "../helpers/flattenObject";
 
+
+
+interface ReplayUriList {
+    name: string,
+    uri: string
+}
 class OnvifServiceCLI {
     device: OnvifDevice;
 
@@ -66,14 +72,14 @@ class OnvifServiceCLI {
                     const streamingUri = data["GetStreamUriResponse"]["MediaUri"]["Uri"];
                     return streamingUri;
                 }))
-                
+
                 console.table(uris);
 
                 if (uris.length)
                     return uris[0];
                 else
                     return "";
-                    
+
             } else {
                 return "";
             }
@@ -84,7 +90,65 @@ class OnvifServiceCLI {
         }
     }
 
+    // Search for replay URI
 
+    public async getReplayUriList(): Promise<Array<ReplayUriList>> {
+        try {
+
+            if (!this.device.services["search"] || !this.device.services["replay"]) {
+                throw new Error("This device does not support Search or Replay or both capabilities")
+            }
+
+            let list: Array<ReplayUriList> = []
+
+            // Request the available recordings
+            let onvifResult = await this.device.services.search.findRecordings({
+                Scope: {},
+                KeepAliveTime: 5
+            })
+
+            if (onvifResult) {
+                // GET RECORDINGS  SEARCH RESULTS
+                const SearchToken = onvifResult["data"]["FindRecordingsResponse"]["SearchToken"]
+                onvifResult = await this.device.services.search.getRecordingSearchResults({
+                    SearchToken
+                });
+                let recordings = onvifResult["data"]["GetRecordingSearchResultsResponse"]["ResultList"]["RecordingInformation"]
+
+                // GET RECORDINGS TOKENs
+                recordings = recordings.map((record: any, i: Number) => {
+                    return {
+                        recordingToken: record["RecordingToken"],
+                        name: record["Source"]["Name"]
+                    }
+                })
+                
+
+                // GET RECORDINGS RTSP URIs
+                list = await Promise.all(recordings.map(async (record: {recordingToken: string, name: string}, i: Number)=>{
+                    const result = await this.device.services?.replay?.getReplayUri({
+                        'StreamSetup': {
+                            'Stream': 'RTP-Unicast',
+                            'Transport': {
+                                'Protocol': 'RTSP',
+                            },
+                        },
+                        'RecordingToken': record.recordingToken,
+                    });
+                    if(result){
+                        const replayUri = result["data"]["GetReplayUriResponse"]["Uri"];
+                        return {
+                            name: record.name,
+                            uri: replayUri
+                        }
+                    }
+                }))
+            }            
+            return list;
+        } catch (error) {
+            throw error
+        }
+    }
 
 
     public static getCapabilityField(capabalities: Capabalities, field?: CapabalitiesFields) {
@@ -115,6 +179,8 @@ class OnvifServiceCLI {
                 return flattenObject(capabalities)
         }
     }
+
+
     // SETUP RTSP URL
     public static setupRtspUrl(url: string, user: string, pass: string): string {
         let uri = url;
@@ -133,6 +199,7 @@ class OnvifServiceCLI {
         return uri;
     }
 
+
     private extractProfile(s: Scopes): OnvifProfile {
         const startIndex = s.ScopeItem.lastIndexOf("/") + 1;
         return {
@@ -143,23 +210,3 @@ class OnvifServiceCLI {
 }
 
 export default OnvifServiceCLI;
-
-function flattenObject(ob: any): any {
-    var toReturn: any = {};
-
-    for (var i in ob) {
-        if (!ob.hasOwnProperty(i)) continue;
-
-        if ((typeof ob[i]) == 'object' && ob[i] !== null) {
-            var flatObject = flattenObject(ob[i]);
-            for (var x in flatObject) {
-                if (!flatObject.hasOwnProperty(x)) continue;
-
-                toReturn[i + '.' + x] = flatObject[x];
-            }
-        } else {
-            toReturn[i] = ob[i];
-        }
-    }
-    return toReturn;
-}

@@ -2,7 +2,7 @@ import DeviceInfo from "../classes/deviceInfo.class";
 import IDeviceInfo from "../interfaces/cli/deviceInfo.interface";
 import PromptService from "./prompt.service";
 import validator from 'validator';
-import { OnvifDevice } from "node-onvif-ts";
+import { OnvifDevice } from "node-onvif-ts-extended";
 import { logLoading } from "../helpers/logger";
 import { logError } from "../helpers/logger";
 import { CapabalitiesFields } from "../enum/capabalities.enum";

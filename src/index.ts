@@ -1,13 +1,14 @@
 #! /usr/bin/env node
 import PromptService from "./services/prompt.service"
 import validator from 'validator';
-import { OnvifDevice } from "node-onvif-ts";
+import { OnvifDevice } from "node-onvif-ts-extended";
 import { logError, logJSON, logLoading, logSuccess, logTable } from "./helpers/logger";
 import CLIService from "./services/cli.service";
 import IDeviceInfo from "./interfaces/cli/deviceInfo.interface";
 import Capabalities from "./interfaces/onvif/capabilities.interface";
 import { Scopes } from "./interfaces/onvif/scopes.interface";
 import OnvifServiceCLI from "./services/onvif.service";
+import flattenObject from "./helpers/flattenObject";
 
 
 let deviceInfo: IDeviceInfo;
@@ -28,8 +29,9 @@ async function cli() {
             device = await CLIService.initOnvifDevice(deviceInfo);
         }
 
+
         onvifService = new OnvifServiceCLI(device);
-        
+
         // Ask the user for an action
         answer = await PromptService.list(
             "Please choose an action",
@@ -38,6 +40,7 @@ async function cli() {
                 "device-information",
                 "get-capabilites",
                 "get-onvif-profiles",
+                "get-recordings",
                 "get-streaming-uri",
                 "change-device",
                 "exit"
@@ -63,6 +66,11 @@ async function cli() {
             case "get-onvif-profiles": {
                 const profiles = await onvifService.getOnvifProfiles();
                 logTable(profiles);
+                break;
+            }
+            case "get-recordings": {
+                const uris = await onvifService.getReplayUriList()
+                logTable(uris)
                 break;
             }
             case "get-streaming-uri": {
